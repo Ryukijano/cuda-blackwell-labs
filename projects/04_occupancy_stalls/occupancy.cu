@@ -710,7 +710,7 @@ int main() {
     float *d_out, *d_in;
     CUDA_CHECK(cudaMalloc(&d_out, bytes));
     CUDA_CHECK(cudaMalloc(&d_in, bytes));
-    cudaMemset(d_in, 1, bytes);
+    cudaMemset(d_in, 0, bytes);
 
     // Part A: Register pressure
     register_pressure_test(d_out, n);
