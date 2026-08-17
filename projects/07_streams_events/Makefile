@@ -19,16 +19,14 @@ $(TARGET): $(SRCS)
 	$(NVCC) $(NVCCFLAGS) $< -o $@
 
 run: $(TARGET)
+	mkdir -p ../../results
 	./$(TARGET) | tee ../../results/$(PROJECT).txt
 
 ptx: $(SRCS)
 	$(NVCC) -arch=compute_121 -ptx -O2 -std=c++17 -I$(COMMON) $< -o streams.ptx
 
 profile: $(TARGET)
-	$(CUDA_HOME)/bin/nsys profile --stats=true \
-		-o ../../results/$(PROJECT).nsys-rep ./$(TARGET)
-
-profile: $(TARGET)
+	mkdir -p ../../results
 	$(CUDA_HOME)/bin/nsys profile --stats=true \
 		-o ../../results/$(PROJECT).nsys-rep ./$(TARGET)
 

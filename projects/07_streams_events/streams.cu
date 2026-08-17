@@ -268,7 +268,7 @@ void uma_copy_experiment(int n) {
     GpuTimer t2;
     std::vector<double> t2s(20);
     for (int i = 0; i < 20; i++) {
-        t2.start(); cudaMemcpyAsync(d, h_p, bytes, cudaMemcpyHostToDevice, stream); t2.stop();
+        t2.start(stream); cudaMemcpyAsync(d, h_p, bytes, cudaMemcpyHostToDevice, stream); t2.stop(stream);
         t2s[i] = t2.milliseconds();
     }
     cudaStreamSynchronize(stream);
@@ -288,11 +288,10 @@ void uma_copy_experiment(int n) {
     std::vector<double> t3s(20);
     for (int i = 0; i < 20; i++) {
         cudaMemLocation host_loc = {cudaMemLocationTypeHost, 0};
-        t3.start();
+        t3.start(stream);
         cudaMemPrefetchAsync(m, bytes, host_loc, 0, stream);
-        t3.stop();
+        t3.stop(stream);
         t3s[i] = t3.milliseconds();
-        cudaStreamSynchronize(stream);
     }
     std::sort(t3s.begin(), t3s.end());
     cudaFree(m);
@@ -345,9 +344,15 @@ int main() {
 
     uma_copy_experiment(16777216);  // 64MB
 
-    // Verify correctness (simple check on last batch)
+    // Verify correctness (compute expected h_out[0] from h_in[0])
+    float x0 = h_in[0] * 0.5f + 0.1f;
+    for (int j = 0; j < 10; j++) x0 = x0 * 1.0001f + 0.001f;
     float first = h_out[0];
-    printf("\n  Sanity check h_out[0] = %.4f (should be ~0.6)\n", first);
+    if (fabsf(first - x0) > 1e-4f) {
+        printf("\n  WARNING: h_out[0] = %.4f, expected %.4f\n", first, x0);
+    } else {
+        printf("\n  Sanity check h_out[0] = %.4f, expected %.4f  OK\n", first, x0);
+    }
 
     free(h_in); free(h_out);
     return 0;
