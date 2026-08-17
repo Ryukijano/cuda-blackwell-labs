@@ -40,10 +40,6 @@ dist/
 *.egg-info/
 *.eggs/
 
-# PyTorch C++ extension build intermediates
-projects/10_endosight_kernel/build/
-projects/10_endosight_kernel/endosight_kernel*.so
-
 # Generated test video files and intermediate outputs
 projects/09_nvdec_pipeline/*.mp4
 projects/09_nvdec_pipeline/*.avi

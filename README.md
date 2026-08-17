@@ -1,6 +1,6 @@
 # CUDA Blackwell Labs
 
-A 10-project learning plan for CUDA mastery on the **NVIDIA DGX Spark (GB10 Grace Blackwell, SM121)**.
+A 9-project learning plan for CUDA mastery on the **NVIDIA DGX Spark (GB10 Grace Blackwell, SM121)**.
 
 ## Hardware (from Project 01 probe)
 
@@ -85,11 +85,6 @@ A 10-project learning plan for CUDA mastery on the **NVIDIA DGX Spark (GB10 Grac
 - NVDEC + CPU preprocess: 130 FPS (NV12→RGB CPU conversion is the bottleneck)
 - NVDEC only wins when frames stay GPU-resident for cvcuda preprocess
 
-### Endosight CUDA Kernel (Project 10)
-- PyTorch C++/CUDA extension for point-cloud RGB validity filtering
-- Speedup over baseline: **1.30x at 5M points**, with custom CUB compaction + gather
-- Lesson: custom CUDA only wins when operation is repeated millions of times and data is large
-
 ## Project List
 
 | # | Project | Phase | Status |
@@ -103,7 +98,6 @@ A 10-project learning plan for CUDA mastery on the **NVIDIA DGX Spark (GB10 Grac
 | 7 | Streams, Events, Async Allocation | 3 — Runtime & Systems | ✅ Complete |
 | 8 | CUDA Graphs | 3 | ✅ Complete |
 | 9 | NVDEC Video Pipeline | 3 | ✅ Complete |
-| 10 | Custom Endosight CUDA Kernel | 4 — Capstone | ✅ Complete |
 
 ## Directory Structure
 
@@ -150,15 +144,9 @@ cuda-blackwell-labs/
 │   │   ├── Makefile
 │   │   ├── graphs.cu
 │   │   └── ANALYSIS.md
-│   ├── 09_nvdec_pipeline/      # ✅ Complete
-│   │   ├── Makefile
-│   │   ├── nvdec_pipeline.py
-│   │   └── ANALYSIS.md
-│   └── 10_endosight_kernel/    # ✅ Complete
-│       ├── setup.py
-│       ├── endosight_binding.cpp
-│       ├── endosight_kernel.cu
-│       ├── benchmark.py
+│   └── 09_nvdec_pipeline/      # ✅ Complete
+│       ├── Makefile
+│       ├── nvdec_pipeline.py
 │       └── ANALYSIS.md
 └── results/                    # Generated benchmark outputs (in repo for reference)
 ```
@@ -189,11 +177,6 @@ make profile
 # Run Python-based NVDEC pipeline
 cd projects/09_nvdec_pipeline
 make
-
-# Build and benchmark custom PyTorch CUDA extension
-cd projects/10_endosight_kernel
-make build
-make run
 ```
 
 ## Requirements
@@ -202,7 +185,7 @@ make run
 - CUDA 13.0+
 - GCC 11+
 - `make`
-- For Project 09/10: conda environment `3d_recon` with PyTorch, OpenCV, cvcuda
+- For Project 09: conda environment `3d_recon` with PyTorch, OpenCV, cvcuda
 
 ## Precision Performance Summary (4096x4096 GEMM, cuBLAS)
 
