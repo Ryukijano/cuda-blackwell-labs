@@ -1,0 +1,3 @@
+==PROF== Connected to process 1086816 (/tmp/agentic_converstations/learning-plans/cuda-blackwell-labs/projects/02_memory_bandwidth/bandwidth_test)
+==ERROR== ERR_NVGPUCTRPERM - The user does not have permission to access NVIDIA GPU Performance Counters on the target device 0. For instructions on enabling permissions and to get more information see https://developer.nvidia.com/ERR_NVGPUCTRPERM
+==PROF== Disconnected from process 1086816
