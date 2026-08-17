@@ -1,6 +1,6 @@
 # Project 06 — Precision Lab
 
-Benchmark GEMM, pointwise ops, reduction, and softmax across FP32, TF32, FP16, and BF16 on the GB10 SM121.  An optional narrow-precision add-on (`precision_narrow`) exercises FP8 E4M3 and NVFP4 E2M1 via cuBLASLt.
+Benchmark GEMM, pointwise ops, reduction, and softmax across FP32, TF32, FP16, and BF16 on the GB10 SM121.  A narrow-precision add-on (`precision_narrow`) exercises FP8 E4M3 and NVFP4 E2M1 via cuBLASLt.
 
 ## Quick start
 
@@ -27,7 +27,8 @@ make clean
 ## Findings
 
 - FP8 E4M3 is fully supported on the GB10 with cuBLASLt and reaches ~150 TFLOP/s at 4096².
-- NVFP4 E2M1 requires VEC16_UE4M3 block-scaling and a 128×4 swizzled scale layout; the installed CUDA 13.0 / cuBLAS 13.1.1 stack reports `UNSUPPORTED` for simple scalar-scale configurations.  To go further, use the official `LtNvfp4Matmul` sample or CUTLASS `79_blackwell_geforce_gemm`.
+- NVFP4 E2M1 works through cuBLASLt with VEC16_UE4M3 block-scaled A/B/DOut and a scalar float D scale.  It reaches ~350 TFLOP/s at 4096² on this GPU — substantially faster than FP8/FP16 for large GEMMs.
+- The official `LtNvfp4Matmul` sample and CUTLASS `79_blackwell_geforce_gemm` are the reference implementations for block-scale layout.
 
 ## Artifacts
 

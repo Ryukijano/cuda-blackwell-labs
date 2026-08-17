@@ -154,40 +154,48 @@ double cublaslt_gemm_fp8(cublasLtHandle_t lt, int M, int N, int K) {
 double cublaslt_gemm_fp4_attempt(cublasLtHandle_t lt, int M, int N, int K) {
     int pairsA = (M * K + 1) / 2;
     int pairsB = (K * N + 1) / 2;
+    int pairsD = (M * N + 1) / 2;
 
-    __nv_fp4x2_e2m1 *d_A, *d_B;
-    __nv_bfloat16 *d_C;
-    __nv_fp8_e4m3 *d_scaleA, *d_scaleB, *d_scaleD;
-    void *d_ws;
+    __nv_fp4x2_e2m1 *d_A = nullptr, *d_B = nullptr, *d_D = nullptr;
+    __nv_bfloat16 *d_C = nullptr;
+    __nv_fp8_e4m3 *d_scaleA = nullptr, *d_scaleB = nullptr, *d_out_scale = nullptr;
+    float *d_scaleD = nullptr;
+    void *d_ws = nullptr;
     size_t wsSize = 4 * 1024 * 1024;
 
     CUDA_CHECK(cudaMalloc(&d_A, (size_t)pairsA * sizeof(__nv_fp4x2_e2m1)));
     CUDA_CHECK(cudaMalloc(&d_B, (size_t)pairsB * sizeof(__nv_fp4x2_e2m1)));
     CUDA_CHECK(cudaMalloc(&d_C, (size_t)M * N * sizeof(__nv_bfloat16)));
+    CUDA_CHECK(cudaMalloc(&d_D, (size_t)pairsD * sizeof(__nv_fp4x2_e2m1)));
     CUDA_CHECK(cudaMalloc(&d_ws, wsSize));
 
-    // Try VEC16_UE4M3 block scales; all-1.0 scales keep magnitudes unchanged.
+    // A/B/DOut use VEC16_UE4M3 block scales; D (the FP4 input/output scale)
+    // uses a per-tensor float scalar.  All-1.0 keeps magnitudes unchanged.
     cublasLtMatmulMatrixScale_t AScaleMode = CUBLASLT_MATMUL_MATRIX_SCALE_VEC16_UE4M3;
     cublasLtMatmulMatrixScale_t BScaleMode = CUBLASLT_MATMUL_MATRIX_SCALE_VEC16_UE4M3;
-    cublasLtMatmulMatrixScale_t DScaleMode = CUBLASLT_MATMUL_MATRIX_SCALE_VEC16_UE4M3;
+    cublasLtMatmulMatrixScale_t DScaleMode = CUBLASLT_MATMUL_MATRIX_SCALE_SCALAR_32F;
     cublasLtMatmulMatrixScale_t DOutScaleMode = CUBLASLT_MATMUL_MATRIX_SCALE_VEC16_UE4M3;
 
     size_t scaleA_elems = scale_tensor_size_vec16(K, M);
     size_t scaleB_elems = scale_tensor_size_vec16(K, N);
-    size_t scaleD_elems = scale_tensor_size_vec16(N, M);
+    size_t scaleDOut_elems = scale_tensor_size_vec16(M, N);
     CUDA_CHECK(cudaMalloc(&d_scaleA, scaleA_elems * sizeof(__nv_fp8_e4m3)));
     CUDA_CHECK(cudaMalloc(&d_scaleB, scaleB_elems * sizeof(__nv_fp8_e4m3)));
-    CUDA_CHECK(cudaMalloc(&d_scaleD, scaleD_elems * sizeof(__nv_fp8_e4m3)));
+    CUDA_CHECK(cudaMalloc(&d_out_scale, scaleDOut_elems * sizeof(__nv_fp8_e4m3)));
+    CUDA_CHECK(cudaMalloc(&d_scaleD, sizeof(float)));
 
     fill_fp4x2<<<(pairsA + 255) / 256, 256>>>(d_A, pairsA);
     fill_fp4x2<<<(pairsB + 255) / 256, 256>>>(d_B, pairsB);
+    CUDA_CHECK(cudaMemset(d_C, 0, (size_t)M * N * sizeof(__nv_bfloat16)));
     fill_fp8<<<(scaleA_elems + 255) / 256, 256>>>(d_scaleA, scaleA_elems);
     fill_fp8<<<(scaleB_elems + 255) / 256, 256>>>(d_scaleB, scaleB_elems);
-    fill_fp8<<<(scaleD_elems + 255) / 256, 256>>>(d_scaleD, scaleD_elems);
+    fill_fp8<<<(scaleDOut_elems + 255) / 256, 256>>>(d_out_scale, scaleDOut_elems);
+    float one = 1.0f;
+    CUDA_CHECK(cudaMemcpy(d_scaleD, &one, sizeof(float), cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaDeviceSynchronize());
 
     cublasLtMatmulDesc_t opDesc = nullptr;
-    cublasLtMatrixLayout_t Adesc = nullptr, Bdesc = nullptr, Cdesc = nullptr;
+    cublasLtMatrixLayout_t Adesc = nullptr, Bdesc = nullptr, Cdesc = nullptr, Ddesc = nullptr;
     cublasLtMatmulPreference_t pref = nullptr;
     cublasLtMatmulHeuristicResult_t heuristic = {};
     int returned = 0;
@@ -209,23 +217,25 @@ double cublaslt_gemm_fp4_attempt(cublasLtHandle_t lt, int M, int N, int K) {
     cublasLtMatmulDescSetAttribute(opDesc, CUBLASLT_MATMUL_DESC_A_SCALE_POINTER, &d_scaleA, sizeof(d_scaleA));
     cublasLtMatmulDescSetAttribute(opDesc, CUBLASLT_MATMUL_DESC_B_SCALE_POINTER, &d_scaleB, sizeof(d_scaleB));
     cublasLtMatmulDescSetAttribute(opDesc, CUBLASLT_MATMUL_DESC_D_SCALE_POINTER, &d_scaleD, sizeof(d_scaleD));
-    cublasLtMatmulDescSetAttribute(opDesc, CUBLASLT_MATMUL_DESC_D_OUT_SCALE_POINTER, &d_scaleD, sizeof(d_scaleD));
+    cublasLtMatmulDescSetAttribute(opDesc, CUBLASLT_MATMUL_DESC_D_OUT_SCALE_POINTER, &d_out_scale, sizeof(d_out_scale));
 
-    cublasLtMatrixLayoutCreate(&Adesc, CUDA_R_4F_E2M1, M, K, M);
-    cublasLtMatrixLayoutCreate(&Bdesc, CUDA_R_4F_E2M1, K, N, K);
-    cublasLtMatrixLayoutCreate(&Cdesc, CUDA_R_16BF, M, N, M);
+    // With opA=T, A is K x M in col-major; with opB=N, B is K x N in col-major.
+    CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&Adesc, CUDA_R_4F_E2M1, K, M, K));
+    CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&Bdesc, CUDA_R_4F_E2M1, K, N, K));
+    CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&Cdesc, CUDA_R_16BF, M, N, M));
+    CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&Ddesc, CUDA_R_4F_E2M1, M, N, M));
 
-    cublasLtMatmulPreferenceCreate(&pref);
-    cublasLtMatmulPreferenceSetAttribute(pref, CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES, &wsSize, sizeof(wsSize));
+    CUBLAS_CHECK(cublasLtMatmulPreferenceCreate(&pref));
+    CUBLAS_CHECK(cublasLtMatmulPreferenceSetAttribute(pref, CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES, &wsSize, sizeof(wsSize)));
 
-    st = cublasLtMatmulAlgoGetHeuristic(lt, opDesc, Adesc, Bdesc, Cdesc, Cdesc, pref, 1, &heuristic, &returned);
+    st = cublasLtMatmulAlgoGetHeuristic(lt, opDesc, Adesc, Bdesc, Cdesc, Ddesc, pref, 1, &heuristic, &returned);
     if (st != CUBLAS_STATUS_SUCCESS || returned == 0) {
         goto cleanup;
     }
 
     for (int i = 0; i < 3; i++) {
         st = cublasLtMatmul(lt, opDesc, &alpha, d_A, Adesc, d_B, Bdesc,
-                            &beta, d_C, Cdesc, d_C, Cdesc,
+                            &beta, d_C, Cdesc, d_D, Ddesc,
                             &heuristic.algo, d_ws, wsSize, 0);
         if (st != CUBLAS_STATUS_SUCCESS) goto cleanup;
     }
@@ -234,7 +244,7 @@ double cublaslt_gemm_fp4_attempt(cublasLtHandle_t lt, int M, int N, int K) {
     for (int i = 0; i < 10; i++) {
         timer.start();
         st = cublasLtMatmul(lt, opDesc, &alpha, d_A, Adesc, d_B, Bdesc,
-                            &beta, d_C, Cdesc, d_C, Cdesc,
+                            &beta, d_C, Cdesc, d_D, Ddesc,
                             &heuristic.algo, d_ws, wsSize, 0);
         timer.stop();
         if (st != CUBLAS_STATUS_SUCCESS) goto cleanup;
@@ -245,11 +255,13 @@ double cublaslt_gemm_fp4_attempt(cublasLtHandle_t lt, int M, int N, int K) {
 
 cleanup:
     if (pref) cublasLtMatmulPreferenceDestroy(pref);
+    if (Ddesc) cublasLtMatrixLayoutDestroy(Ddesc);
     if (Cdesc) cublasLtMatrixLayoutDestroy(Cdesc);
     if (Bdesc) cublasLtMatrixLayoutDestroy(Bdesc);
     if (Adesc) cublasLtMatrixLayoutDestroy(Adesc);
     if (opDesc) cublasLtMatmulDescDestroy(opDesc);
-    cudaFree(d_A); cudaFree(d_B); cudaFree(d_C); cudaFree(d_scaleA); cudaFree(d_scaleB); cudaFree(d_scaleD); cudaFree(d_ws);
+    cudaFree(d_A); cudaFree(d_B); cudaFree(d_C); cudaFree(d_D);
+    cudaFree(d_scaleA); cudaFree(d_scaleB); cudaFree(d_out_scale); cudaFree(d_scaleD); cudaFree(d_ws);
     return ms;
 }
 
