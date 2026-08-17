@@ -1,0 +1,115 @@
+
+============================================================
+  CUDA Memory Deep Dive — GB10 DGX Spark
+============================================================
+
+  L2 cache: 24 MB | Peak BW: 273.0 GB/s | Unified LPDDR5X
+
+
+============================================================
+  L2 Cache Boundary Detection (fine-grained)
+============================================================
+
+  Size           BW (GB/s)        % Peak          Note
+  ----------    ----------        ------          ----
+     4 MB          974.5         357.0%  fits in L2
+     6 MB         1163.4         426.1%  fits in L2
+     8 MB         1219.3         446.6%  fits in L2
+    10 MB          471.1         172.6%  fits in L2
+    12 MB          401.7         147.1%  fits in L2
+    14 MB          324.9         119.0%  fits in L2
+    16 MB          317.5         116.3%  fits in L2
+    18 MB          303.6         111.2%  fits in L2
+    20 MB          290.6         106.4%  fits in L2
+    22 MB          282.8         103.6%  fits in L2
+    24 MB          271.1          99.3%  fits in L2
+    26 MB          263.2          96.4%  <-- L2 boundary
+    28 MB          256.0          93.8%  <-- L2 boundary
+    30 MB          252.7          92.6%  spills to DRAM
+    32 MB          248.9          91.2%  spills to DRAM
+    34 MB          247.6          90.7%  spills to DRAM
+    36 MB          246.5          90.3%  spills to DRAM
+    38 MB          240.8          88.2%  spills to DRAM
+    40 MB          214.4          78.5%  spills to DRAM
+    42 MB          218.9          80.2%  spills to DRAM
+    44 MB          208.0          76.2%  spills to DRAM
+    46 MB          211.8          77.6%  spills to DRAM
+    48 MB          207.5          76.0%  spills to DRAM
+
+============================================================
+  Memory Latency (pointer-chase, single thread)
+============================================================
+
+  Size        Latency (ns)     BW (GB/s)   Cache level
+  ----------  ------------    ----------   -----------
+  4KB               18.1            0.22    L1?
+  16KB              18.5            0.22    L1?
+  64KB              20.4            0.20    L1?
+  256KB            119.7            0.03    L2 (24MB)
+  1MB              132.6            0.03    L2 (24MB)
+  4MB              135.1            0.03    L2 (24MB)
+  16MB             137.7            0.03    L2 (24MB)
+  64MB             139.3            0.03    DRAM
+  256MB            141.0            0.03    DRAM
+
+============================================================
+  Random Read: Working Set vs Bandwidth
+============================================================
+
+  WSet           BW (GB/s)        % Peak          Note
+  ----------    ----------        ------          ----
+  1MB              350.2         128.3%  fits in L2
+  4MB              346.0         126.8%  fits in L2
+  16MB             176.4          64.6%  fits in L2
+  64MB              42.9          15.7%  exceeds L2 -> DRAM
+  128MB             40.3          14.7%  exceeds L2 -> DRAM
+  256MB             21.1           7.7%  exceeds L2 -> DRAM
+  1GB               38.5          14.1%  exceeds L2 -> DRAM
+
+============================================================
+  L2 Persistence Across Kernel Launches (64MB working set)
+============================================================
+
+  Launch  |  Cold BW (GB/s)  |  Warm BW (GB/s)
+  --------|------------------|------------------
+  Trial 1 |           230.8   |           233.4
+  Trial 2 |           234.6   |           234.4
+  Trial 3 |           234.6   |           235.6
+
+  Note: 64MB exceeds 24MB L2, so only partial L2 retention expected.
+  Cold = after flushing L2 with 128MB dummy read.
+  Warm = immediately after cold run (L2 may retain ~24MB of 64MB).
+
+============================================================
+  Read-Only vs Write-Only Bandwidth (256MB)
+============================================================
+
+  Read + write (copy):       read+write (copy)          time=   2.210 ms  BW= 242.9 GB/s  (89.0% peak)
+  Write only:                write_only                 time=   1.347 ms  BW= 199.3 GB/s  (73.0% peak)
+  Note: True read-only BW is hard to measure (compiler needs a sink).
+  The 'copy' kernel gives read+write combined BW.
+  Write-only gives pure write BW.
+  Estimated read-only BW ~ 2 * copy_bw - write_bw
+
+  Estimated read-only BW:  ~282.7 GB/s  (2*copy - write)
+  Measured write-only BW:   ~199.3 GB/s
+  Measured copy (R+W) BW:   ~241.0 GB/s
+
+============================================================
+  Managed Memory: cudaMemAdvise Effect (256MB)
+============================================================
+
+  No advise (warm):        BW= 164.9 GB/s  (60.4% peak)
+  ReadMostly + prefetch:   BW= 165.5 GB/s  (60.6% peak)
+  PreferredLoc + prefetch: BW= 165.2 GB/s  (60.5% peak)
+  cudaMalloc (baseline):   BW= 241.5 GB/s  (88.4% peak)
+
+  Key: cudaMemAdvise + cudaMemPrefetchAsync can close the gap
+  between managed memory and cudaMalloc on UMA.
+
+============================================================
+  Deep Dive Complete
+============================================================
+
+  See results above for L2 boundary, latency, and UMA analysis.
+  Run 'make profile' on bandwidth_test for Nsight Compute metrics.

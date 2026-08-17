@@ -1,0 +1,5 @@
+bandwidth_test
+bandwidth_simple
+deep_dive
+results/*.txt
+results/*.log

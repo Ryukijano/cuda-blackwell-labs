@@ -17,6 +17,9 @@ projects/*/probe
 projects/*/pipeline
 projects/*/pipeline_O*
 projects/*/pipeline_sm*
+projects/*/bandwidth_test
+projects/*/bandwidth_simple
+projects/*/deep_dive
 projects/*/occupancy
 projects/*/gemm
 projects/*/precision
@@ -42,7 +45,7 @@ projects/09_nvdec_pipeline/*.mp4
 projects/09_nvdec_pipeline/*.avi
 
 # Generated benchmark/result files (regenerate with make test)
-results/
+/results/
 projects/03_ptx_sass/*.txt
 projects/03_ptx_sass/*.ptx
 
