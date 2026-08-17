@@ -1,0 +1,75 @@
+# Build artifacts
+*.o
+*.obj
+*.so
+*.a
+*.exe
+*.dll
+*.dylib
+*.ptx
+*.cubin
+*.fatbin
+*.sass
+
+# Compiled binaries (per-project test executables)
+projects/*/*_test
+projects/*/probe
+projects/*/pipeline
+projects/*/pipeline_O*
+projects/*/pipeline_sm*
+projects/*/occupancy
+projects/*/gemm
+projects/*/precision
+projects/*/streams
+projects/*/graph
+projects/*/hardware_probe
+
+# Python build artifacts
+__pycache__/
+*.pyc
+*.pyo
+build/
+dist/
+*.egg-info/
+*.eggs/
+
+# PyTorch C++ extension build intermediates
+projects/10_endosight_kernel/build/
+projects/10_endosight_kernel/endosight_kernel*.so
+
+# Generated test video files and intermediate outputs
+projects/09_nvdec_pipeline/*.mp4
+projects/09_nvdec_pipeline/*.avi
+
+# Generated benchmark/result files (regenerate with make test)
+results/
+projects/03_ptx_sass/*.txt
+projects/03_ptx_sass/*.ptx
+
+# Nsight Systems / Compute reports
+*.nsys-rep
+*.ncu-rep
+*.sqlite
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.log
+
+# Keep Makefiles
+!Makefile
+!projects/*/Makefile
+
+# Keep markdown analysis files
+!projects/*/ANALYSIS.md
+!README.md
