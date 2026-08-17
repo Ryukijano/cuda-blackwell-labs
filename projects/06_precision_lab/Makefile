@@ -19,6 +19,7 @@ $(TARGET): $(SRCS)
 	$(NVCC) $(NVCCFLAGS) $< -o $@ $(LDFLAGS)
 
 run: $(TARGET)
+	@mkdir -p ../../results
 	./$(TARGET) | tee ../../results/$(PROJECT).txt
 
 ptx: $(SRCS)

@@ -255,8 +255,8 @@ void benchmark_gemm_precisions(int M, int N, int K) {
         CUDA_CHECK(cudaMalloc(&d_A, M * K * sizeof(float)));
         CUDA_CHECK(cudaMalloc(&d_B, K * N * sizeof(float)));
         CUDA_CHECK(cudaMalloc(&d_C, M * N * sizeof(float)));
-        cudaMemset(d_A, 1, M * K * sizeof(float));
-        cudaMemset(d_B, 1, K * N * sizeof(float));
+        cudaMemset(d_A, 0, M * K * sizeof(float));
+        cudaMemset(d_B, 0, K * N * sizeof(float));
 
         double ms = cublas_gemm_fp32(handle, d_A, d_B, d_C, M, N, K);
         double tflops = flops / (ms * 1e-3) / 1e12;
@@ -275,8 +275,8 @@ void benchmark_gemm_precisions(int M, int N, int K) {
         CUDA_CHECK(cudaMalloc(&d_A, M * K * sizeof(__half)));
         CUDA_CHECK(cudaMalloc(&d_B, K * N * sizeof(__half)));
         CUDA_CHECK(cudaMalloc(&d_C, M * N * sizeof(__half)));
-        cudaMemset(d_A, 1, M * K * sizeof(__half));
-        cudaMemset(d_B, 1, K * N * sizeof(__half));
+        cudaMemset(d_A, 0, M * K * sizeof(__half));
+        cudaMemset(d_B, 0, K * N * sizeof(__half));
 
         double ms = cublas_gemm_fp16(handle, d_A, d_B, d_C, M, N, K);
         double tflops = flops / (ms * 1e-3) / 1e12;
@@ -295,8 +295,8 @@ void benchmark_gemm_precisions(int M, int N, int K) {
         CUDA_CHECK(cudaMalloc(&d_A, M * K * sizeof(__nv_bfloat16)));
         CUDA_CHECK(cudaMalloc(&d_B, K * N * sizeof(__nv_bfloat16)));
         CUDA_CHECK(cudaMalloc(&d_C, M * N * sizeof(__nv_bfloat16)));
-        cudaMemset(d_A, 1, M * K * sizeof(__nv_bfloat16));
-        cudaMemset(d_B, 1, K * N * sizeof(__nv_bfloat16));
+        cudaMemset(d_A, 0, M * K * sizeof(__nv_bfloat16));
+        cudaMemset(d_B, 0, K * N * sizeof(__nv_bfloat16));
 
         double ms = cublas_gemm_bf16(handle, d_A, d_B, d_C, M, N, K);
         double tflops = flops / (ms * 1e-3) / 1e12;
@@ -320,8 +320,8 @@ void benchmark_gemm_precisions(int M, int N, int K) {
         CUDA_CHECK(cudaMalloc(&d_A, M * K * sizeof(float)));
         CUDA_CHECK(cudaMalloc(&d_B, K * N * sizeof(float)));
         CUDA_CHECK(cudaMalloc(&d_C, M * N * sizeof(float)));
-        cudaMemset(d_A, 1, M * K * sizeof(float));
-        cudaMemset(d_B, 1, K * N * sizeof(float));
+        cudaMemset(d_A, 0, M * K * sizeof(float));
+        cudaMemset(d_B, 0, K * N * sizeof(float));
 
         double ms = cublas_gemm_fp32(handle, d_A, d_B, d_C, M, N, K);
         double tflops = flops / (ms * 1e-3) / 1e12;
@@ -350,7 +350,7 @@ void benchmark_pointwise(int n) {
     float *d_in, *d_out;
     CUDA_CHECK(cudaMalloc(&d_in, bytes));
     CUDA_CHECK(cudaMalloc(&d_out, bytes));
-    cudaMemset(d_in, 1, bytes);
+    cudaMemset(d_in, 0, bytes);
 
     auto bench = [&](auto kernel, const char* name, size_t bytes_moved) {
         for (int i = 0; i < 3; i++) kernel<<<grid, block>>>(d_in, d_out, n);
@@ -384,7 +384,7 @@ void benchmark_reduction(int n) {
     float *d_in, *d_out;
     CUDA_CHECK(cudaMalloc(&d_in, bytes));
     CUDA_CHECK(cudaMalloc(&d_out, sizeof(float)));
-    cudaMemset(d_in, 1, bytes);
+    cudaMemset(d_in, 0, bytes);
 
     float zero = 0.0f;
     for (int i = 0; i < 3; i++) {
@@ -419,7 +419,7 @@ void benchmark_softmax(int M, int N) {
     float *d_in, *d_out;
     CUDA_CHECK(cudaMalloc(&d_in, bytes));
     CUDA_CHECK(cudaMalloc(&d_out, bytes));
-    cudaMemset(d_in, 1, bytes);
+    cudaMemset(d_in, 0, bytes);
 
     int block = 256;
     for (int i = 0; i < 3; i++) softmax_fp32<<<M, block>>>(d_in, d_out, M, N);
@@ -459,7 +459,7 @@ void memory_footprint_table() {
     printf("  %-10s  %12d  %12s  %12s\n", "FP8 E4M3", 1, "±448", "1-2 digits");
     printf("  %-10s  %12d  %12s  %12s\n", "FP8 E5M2", 1, "±57344", "0-1 digits");
     printf("  %-10s  %12d  %12s  %12s\n", "INT8", 1, "±128", "exact");
-    printf("  %-10s  %12d  %12s  %12s\n", "FP4 E2M1", 0.5, "±6", "0-1 digits");
+    printf("  %-10s  %12.1f  %12s  %12s\n", "FP4 E2M1", 0.5, "±6", "0-1 digits");
     printf("\n  Bandwidth savings (vs FP32):\n");
     printf("    FP16/BF16: 2x less memory → 2x faster for memory-bound ops\n");
     printf("    FP8:       4x less memory → 4x faster for memory-bound ops\n");

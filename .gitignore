@@ -22,6 +22,7 @@ projects/*/bandwidth_simple
 projects/*/deep_dive
 projects/*/occupancy
 projects/*/gemm_test
+projects/*/precision_test
 projects/*/occupancy
 projects/*/gemm
 projects/*/precision
