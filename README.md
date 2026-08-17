@@ -1,6 +1,6 @@
 # CUDA Blackwell Labs
 
-A 9-project learning plan for CUDA mastery on the **NVIDIA DGX Spark (GB10 Grace Blackwell, SM121)**.
+A 10-project learning plan for CUDA mastery on the **NVIDIA DGX Spark (GB10 Grace Blackwell, SM121)**.
 
 ## Hardware (from Project 01 probe)
 
@@ -85,6 +85,11 @@ A 9-project learning plan for CUDA mastery on the **NVIDIA DGX Spark (GB10 Grace
 - NVDEC + CPU preprocess: 130 FPS (NV12→RGB CPU conversion is the bottleneck)
 - NVDEC only wins when frames stay GPU-resident for cvcuda preprocess
 
+### Tensor Core MMA (Project 10)
+- Direct `nvcuda::wmma` FP16 Tensor Core GEMM, hand-rolled at warp level
+- cuBLAS reaches ~83 TFLOP/s at 2048³; the naïve WMMA kernel reaches ~14 TFLOP/s
+- Useful for custom ops; for standard GEMMs, cuBLAS is still far faster
+
 ## Project List
 
 | # | Project | Phase | Status |
@@ -98,6 +103,7 @@ A 9-project learning plan for CUDA mastery on the **NVIDIA DGX Spark (GB10 Grace
 | 7 | Streams, Events, Async Allocation | 3 — Runtime & Systems | ✅ Complete |
 | 8 | CUDA Graphs | 3 | ✅ Complete |
 | 9 | NVDEC Video Pipeline | 3 | ✅ Complete |
+| 10 | Hand-rolled FP16 Tensor Core MMA | 4 — Capstone | ✅ Complete |
 
 ## Directory Structure
 
@@ -144,9 +150,14 @@ cuda-blackwell-labs/
 │   │   ├── Makefile
 │   │   ├── graphs.cu
 │   │   └── ANALYSIS.md
-│   └── 09_nvdec_pipeline/      # ✅ Complete
+│   ├── 09_nvdec_pipeline/      # ✅ Complete
+│   │   ├── Makefile
+│   │   ├── nvdec_pipeline.py
+│   │   └── ANALYSIS.md
+│   └── 10_tensor_core_mma/     # ✅ Complete
 │       ├── Makefile
-│       ├── nvdec_pipeline.py
+│       ├── mma.cu
+│       ├── README.md
 │       └── ANALYSIS.md
 └── results/                    # Generated benchmark outputs (in repo for reference)
 ```
@@ -177,6 +188,10 @@ make profile
 # Run Python-based NVDEC pipeline
 cd projects/09_nvdec_pipeline
 make
+
+# Run Tensor Core MMA capstone
+cd projects/10_tensor_core_mma
+make run
 ```
 
 ## Requirements

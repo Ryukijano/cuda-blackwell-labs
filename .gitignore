@@ -30,6 +30,7 @@ projects/*/precision
 projects/*/streams
 projects/*/graph
 projects/*/hardware_probe
+projects/*/mma
 
 # Python build artifacts
 __pycache__/
