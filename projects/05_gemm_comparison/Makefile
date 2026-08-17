@@ -19,7 +19,11 @@ $(TARGET): $(SRCS)
 	$(NVCC) $(NVCCFLAGS) $< -o $@ $(LDFLAGS)
 
 run: $(TARGET)
+	@mkdir -p ../../results
 	./$(TARGET) | tee ../../results/$(PROJECT).txt
+
+test: $(TARGET)
+	./$(TARGET) --test
 
 ptx: $(SRCS)
 	$(NVCC) -arch=compute_121 -ptx -O2 -std=c++17 -I$(COMMON) $< -o gemm.ptx

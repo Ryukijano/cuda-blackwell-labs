@@ -123,14 +123,10 @@ __global__ void vec4_gemm(const float* A, const float* B, float* C, int M, int N
 
     float sum = 0.0f;
     int k = 0;
-    // Process 4 elements at a time using float4
+    // Process 4 elements at a time using float4 for A; B stays scalar
+    // because B[k * N + col] is strided by N and cannot be vectorized cheaply.
     for (; k + 3 < K; k += 4) {
         float4 a4 = *reinterpret_cast<const float4*>(&A[row * K + k]);
-        float4 b4_0 = *reinterpret_cast<const float4*>(&B[k * N + col]);
-        float4 b4_1 = *reinterpret_cast<const float4*>(&B[(k + 1) * N + col]);
-        // B is column-major access — this is NOT coalesced. Need different approach.
-        // Actually B[k * N + col] is strided by N, so float4 won't work for B.
-        // Let's just do scalar for B and float4 for A.
         sum += a4.x * B[k * N + col];
         sum += a4.y * B[(k + 1) * N + col];
         sum += a4.z * B[(k + 2) * N + col];
@@ -386,11 +382,19 @@ void benchmark_gemm(int M, int N, int K, std::vector<GemmResult>& results) {
 // Main
 // ============================================================================
 
-int main() {
+int main(int argc, char** argv) {
     print_header("Five-Way GEMM Comparison — GB10 SM121");
 
+    bool quick_test = false;
+    for (int i = 1; i < argc; i++) {
+        if (std::string(argv[i]) == "--test" || std::string(argv[i]) == "-t") {
+            quick_test = true;
+            printf("  Quick test mode: only running up to 512x512\n\n");
+        }
+    }
+
     int sizes[] = {128, 256, 512, 1024, 2048, 4096};
-    int num_sizes = sizeof(sizes) / sizeof(sizes[0]);
+    int num_sizes = quick_test ? 3 : sizeof(sizes) / sizeof(sizes[0]);
 
     std::vector<GemmResult> all_results;
 
@@ -415,27 +419,29 @@ int main() {
     }
 
     // Print TFLOP/s comparison at largest size
-    print_header("TFLOP/s at 4096x4096");
-    for (auto& r : all_results) {
-        if (r.size == 4096) {
-            printf("  %-12s  %10.2f TFLOP/s\n", r.name, r.tflops);
-        }
-    }
-
-    // Calculate speedup vs naive
-    print_header("Speedup vs Naive (4096x4096)");
-    double naive_time = 0;
-    for (auto& r : all_results) {
-        if (r.size == 4096 && std::string(r.name) == "naive") {
-            naive_time = r.time_ms;
-            break;
-        }
-    }
-    if (naive_time > 0) {
+    if (!quick_test) {
+        print_header("TFLOP/s at 4096x4096");
         for (auto& r : all_results) {
             if (r.size == 4096) {
-                printf("  %-12s  %10.1fx speedup  (%.2f TFLOP/s)\n",
-                       r.name, naive_time / r.time_ms, r.tflops);
+                printf("  %-12s  %10.2f TFLOP/s\n", r.name, r.tflops);
+            }
+        }
+
+        // Calculate speedup vs naive
+        print_header("Speedup vs Naive (4096x4096)");
+        double naive_time = 0;
+        for (auto& r : all_results) {
+            if (r.size == 4096 && std::string(r.name) == "naive") {
+                naive_time = r.time_ms;
+                break;
+            }
+        }
+        if (naive_time > 0) {
+            for (auto& r : all_results) {
+                if (r.size == 4096) {
+                    printf("  %-12s  %10.1fx speedup  (%.2f TFLOP/s)\n",
+                           r.name, naive_time / r.time_ms, r.tflops);
+                }
             }
         }
     }
