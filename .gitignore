@@ -23,6 +23,7 @@ projects/*/deep_dive
 projects/*/occupancy
 projects/*/gemm_test
 projects/*/precision_test
+projects/*/precision_narrow
 projects/*/occupancy
 projects/*/gemm
 projects/*/precision

@@ -5,6 +5,7 @@
 // timing utilities, and GB10-specific constants.
 
 #include <cuda_runtime.h>
+#include <cublas_v2.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -54,6 +55,16 @@
         if (err != cudaSuccess) {                                              \
             fprintf(stderr, "CUDA error (last) at %s:%d: %s\n",                \
                     __FILE__, __LINE__, cudaGetErrorString(err));              \
+            exit(EXIT_FAILURE);                                                \
+        }                                                                      \
+    } while (0)
+
+#define CUBLAS_CHECK(call)                                                     \
+    do {                                                                       \
+        cublasStatus_t err = (call);                                           \
+        if (err != CUBLAS_STATUS_SUCCESS) {                                    \
+            fprintf(stderr, "cuBLAS error at %s:%d: %d\n",                     \
+                    __FILE__, __LINE__, (int)err);                             \
             exit(EXIT_FAILURE);                                                \
         }                                                                      \
     } while (0)

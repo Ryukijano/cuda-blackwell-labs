@@ -2,7 +2,9 @@
 
 PROJECT   := 06_precision_lab
 TARGET    := precision_test
+NARROW    := precision_narrow
 SRCS      := precision.cu
+NARROW_SRC:= precision_narrow.cu
 
 CUDA_HOME ?= /usr/local/cuda
 NVCC      := $(CUDA_HOME)/bin/nvcc
@@ -11,12 +13,19 @@ COMMON    := ../../common
 NVCCFLAGS := -arch=$(ARCH) -O2 -lineinfo -std=c++17 -I$(COMMON)
 LDFLAGS   := -lcublas -lcublasLt
 
-.PHONY: all clean run ptx profile
+.PHONY: all narrow clean run ptx profile
 
 all: $(TARGET)
 
 $(TARGET): $(SRCS)
 	$(NVCC) $(NVCCFLAGS) $< -o $@ $(LDFLAGS)
+
+$(NARROW): $(NARROW_SRC)
+	$(NVCC) $(NVCCFLAGS) $< -o $@ $(LDFLAGS)
+
+narrow: $(NARROW)
+	@mkdir -p ../../results
+	./$(NARROW) | tee ../../results/$(PROJECT)_narrow.txt
 
 run: $(TARGET)
 	@mkdir -p ../../results
@@ -30,4 +39,4 @@ profile: $(TARGET)
 		-o ../../results/$(PROJECT).ncu-rep --force-overwrite ./$(TARGET)
 
 clean:
-	rm -f $(TARGET) *.o *.ptx
+	rm -f $(TARGET) $(NARROW) *.o *.ptx
