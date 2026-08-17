@@ -33,7 +33,7 @@ test: all
 	@mkdir -p results
 	@for proj in $(PROJECTS); do \
 		echo "=== Running $$proj ==="; \
-		$(MAKE) -C $$proj run 2>&1 | tee results/$$(notdir $$proj).txt; \
+		$(MAKE) -C $$proj run; \
 		echo ""; \
 	done
 

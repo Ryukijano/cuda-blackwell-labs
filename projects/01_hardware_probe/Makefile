@@ -22,6 +22,7 @@ $(TARGET): $(SRCS)
 	$(NVCC) $(NVCCFLAGS) $< -o $@
 
 run: $(TARGET)
+	@mkdir -p ../../results
 	./$(TARGET) | tee ../../results/$(PROJECT).txt
 
 # Also generate PTX for inspection (uses compute_121 for forward-compatible PTX)

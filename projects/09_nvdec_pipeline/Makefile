@@ -2,12 +2,15 @@
 
 PROJECT := 09_nvdec_pipeline
 
-.PHONY: all test clean
+.PHONY: all run test clean
 
 all:
 	@echo "Run with: conda run -n 3d_recon python nvdec_pipeline.py"
 
+run: test
+
 test:
+	mkdir -p ../../results
 	conda run -n 3d_recon python nvdec_pipeline.py | tee ../../results/$(PROJECT).txt
 
 clean:

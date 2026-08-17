@@ -46,6 +46,7 @@ projects/09_nvdec_pipeline/*.avi
 
 # Generated benchmark/result files (regenerate with make test)
 /results/
+projects/*/results/
 projects/03_ptx_sass/*.txt
 projects/03_ptx_sass/*.ptx
 
