@@ -37,6 +37,11 @@ projects/*/cupti_trace
 projects/*/cutlass_gemm
 projects/*/fp4_mma
 projects/*/flash_attention
+projects/*/uma_bw
+projects/*/uma_atomic
+projects/*/uma_fault
+projects/*/psi_monitor
+projects/*/cute_gemm
 
 # Large dependencies (fetched on build)
 projects/15_cutlass_gemm/cutlass/

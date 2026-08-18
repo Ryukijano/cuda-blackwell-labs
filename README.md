@@ -1,6 +1,6 @@
 # CUDA Blackwell Labs
 
-A 10-project learning plan for CUDA mastery on the **NVIDIA DGX Spark (GB10 Grace Blackwell, SM121)**.
+A 22-project learning plan for CUDA mastery on the **NVIDIA DGX Spark (GB10 Grace Blackwell, SM121)**.
 
 ## Hardware (from Project 01 probe)
 
@@ -124,6 +124,28 @@ A 10-project learning plan for CUDA mastery on the **NVIDIA DGX Spark (GB10 Grac
 - Avoids materialising the `N x N` attention matrix
 - Numerically matches a naive CPU attention reference
 
+### UMA PTX Bandwidth Probe (Project 18)
+- `ld.global.cg` (L1 bypass) and `st.global.cs` (streaming write) give ~170/116 GB/s on the shared LPDDR5X pool
+- Copy (read+write) reaches ~165 GB/s, close to the 273 GB/s peak
+- Confirms that the CPU and GPU see the same physical UMA on GB10
+
+### UMA Atomic Coherence Probe (Project 19)
+- `atom.global.gpu` and `atom.global.sys` have near-identical p50 latency (~10 ns)
+- SYS/GPU ratio of 1.0x shows that the hardware-coherent UMA has no extra C2C coherence tax for these microbenchmarks
+
+### UMA Fault / Residency Latency (Project 20)
+- `ld.global.cv` per-access p50 is ~6.6 ns for COLD, WARM, and PRESSURE passes
+- COLD/WARM ratio of 1.0x confirms that hardware-coherent UMA handles page residency with minimal OS fault overhead
+
+### PSI Memory Stall Monitor (Project 21)
+- `/proc/pressure/memory` is the most reliable GB10 memory-stall signal when NVML/UVM tracing is unavailable
+- A 256 MB streaming read load reports ~0% `some`/`full` stall in the steady state
+
+### CuTe DSL Hello GEMM (Project 22)
+- Minimal CuTe 3.8 FMA-based FP16 GEMM runs on `sm_121` without TMEM or WGMMA
+- 512³ passes against a half-precision CPU reference within the accumulated rounding tolerance
+- ~5.6 TFLOPS for 512³ — much lower than Tensor Core kernels, as expected for an FMA-only CuTe kernel
+
 ## Project List
 
 | # | Project | Phase | Status |
@@ -144,7 +166,12 @@ A 10-project learning plan for CUDA mastery on the **NVIDIA DGX Spark (GB10 Grac
 | 14 | Tiny Transformer Training (PyTorch) | 5 — Deep Learning | ✅ Complete |
 | 15 | CUTLASS 3.8 Hello GEMM | 5 | ✅ Complete |
 | 16 | Hand-rolled FP4 PTX MMA | 5 | ✅ Complete |
-| 17 | FlashAttention-style Online Softmax Attention | 5 | ✅ Complete |
+| 17 | FlashAttention-style Online Softmax Attention | 5 |  ✅ Complete |
+| 18 | UMA PTX Bandwidth Probe | 6 — UMA Ground Truth |  ✅ Complete |
+| 19 | UMA Atomic Coherence Probe | 6 |  ✅ Complete |
+| 20 | UMA Fault / Residency Latency | 6 |  ✅ Complete |
+| 21 | PSI Memory Stall Monitor | 6 |  ✅ Complete |
+| 22 | CuTe DSL Hello GEMM | 6 |  ✅ Complete | ✅ Complete |
 
 ## Directory Structure
 
@@ -204,9 +231,14 @@ cuda-blackwell-labs/
 │   ├── 12_conditional_graphs/  # ✅ Complete
 │   ├── 13_cupti_trace/         # ✅ Complete
 │   ├── 14_tiny_transformer/    # ✅ Complete
-│   ├── 15_cutlass_gemm/        # ✅ Complete
-│   ├── 16_fp4_ptx_mma/         # ✅ Complete
-│   └── 17_flash_attention/     # ✅ Complete
+│   ├── 15_cutlass_gemm/        #  ✅ Complete
+│   ├── 16_fp4_ptx_mma/         #  ✅ Complete
+│   ├── 17_flash_attention/     #  ✅ Complete
+│   ├── 18_uma_bw/              #  ✅ Complete
+│   ├── 19_uma_atomic/          #  ✅ Complete
+│   ├── 20_uma_fault/           #  ✅ Complete
+│   ├── 21_psi_monitor/         #  ✅ Complete
+│   └── 22_cutlass_cute_gemm/   #  ✅ Complete
 └── results/                    # Generated benchmark outputs (in repo for reference)
 ```
 
@@ -268,6 +300,24 @@ make run
 
 # Run FlashAttention-style attention
 cd projects/17_flash_attention
+make run
+
+# UMA PTX bandwidth, atomic coherence, fault/residency probes
+cd projects/18_uma_bw
+make run
+
+cd projects/19_uma_atomic
+make run
+
+cd projects/20_uma_fault
+make run
+
+# PSI memory pressure monitor (reads /proc/pressure/memory)
+cd projects/21_psi_monitor
+make run
+
+# CuTe DSL Hello GEMM (needs CUTLASS from project 15)
+cd projects/22_cutlass_cute_gemm
 make run
 ```
 
