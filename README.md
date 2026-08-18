@@ -90,6 +90,40 @@ A 10-project learning plan for CUDA mastery on the **NVIDIA DGX Spark (GB10 Grac
 - cuBLAS reaches ~83 TFLOP/s at 2048³; the naïve WMMA kernel reaches ~14 TFLOP/s
 - Useful for custom ops; for standard GEMMs, cuBLAS is still far faster
 
+### TMA (Project 11)
+- Uses `cp.async.bulk.tensor` and `CUtensorMap` for 2D tile copies
+- On GB10, TMA matches or slightly beats a naive `cudaMemcpy` for large 2D tiles
+- Key benefit is asynchronous, tiled copies without per-thread index arithmetic
+
+### Conditional Graphs (Project 12)
+- CUDA 12.x conditional nodes (`IF/ELSE` and `WHILE`) execute inside a CUDA graph
+- Avoids re-capturing graphs when runtime decisions are needed
+
+### CUPTI Activity Trace (Project 13)
+- Records kernel names, durations, and launch dimensions via CUPTI activity callbacks
+- Does **not** require profiling counter permissions, unlike CUPTI Range Profiler
+- Counter sampling is blocked on this system by `ERR_NVGPUCTRPERM`
+
+### Tiny Transformer (Project 14)
+- Minimal PyTorch decoder (7.3 M params) trains on the GB10
+- ~139 k tokens/sec and 4.3 estimated TFLOPS for the tiny configuration
+- PyTorch 2.11+cu130 works out of the box
+
+### CUTLASS Hello GEMM (Project 15)
+- First `cutlass::gemm::device::Gemm` FP16 kernel with CUTLASS 3.8
+- 1024³ passes at ~15.7 TFLOPS with the default SIMT configuration
+- Tensor-core tuning (`OpClassTensorOp`, `GemmShape`) is the next step
+
+### FP4 PTX MMA (Project 16)
+- Native Blackwell `mma.sync.aligned.m16n8k64` FP4 block-scaled instruction
+- Requires `compute_121a`/`sm_121a`; `sm_121` ptxas target rejects the `.kind::mxf4nvf4` modifier
+- A probe with A=B=1.0 and scale=1.0 returns the expected `64.0` accumulators
+
+### Online Softmax Attention (Project 17)
+- Single-pass FlashAttention-style online softmax
+- Avoids materialising the `N x N` attention matrix
+- Numerically matches a naive CPU attention reference
+
 ## Project List
 
 | # | Project | Phase | Status |
@@ -104,6 +138,13 @@ A 10-project learning plan for CUDA mastery on the **NVIDIA DGX Spark (GB10 Grac
 | 8 | CUDA Graphs | 3 | ✅ Complete |
 | 9 | NVDEC Video Pipeline | 3 | ✅ Complete |
 | 10 | Hand-rolled FP16 Tensor Core MMA | 4 — Capstone | ✅ Complete |
+| 11 | TMA (Tensor Memory Accelerator) 2D Tile Copy | 4 | ✅ Complete |
+| 12 | CUDA Graph Conditional/While Nodes | 4 | ✅ Complete |
+| 13 | CUPTI Activity Trace | 4 | ✅ Complete |
+| 14 | Tiny Transformer Training (PyTorch) | 5 — Deep Learning | ✅ Complete |
+| 15 | CUTLASS 3.8 Hello GEMM | 5 | ✅ Complete |
+| 16 | Hand-rolled FP4 PTX MMA | 5 | ✅ Complete |
+| 17 | FlashAttention-style Online Softmax Attention | 5 | ✅ Complete |
 
 ## Directory Structure
 
@@ -154,11 +195,18 @@ cuda-blackwell-labs/
 │   │   ├── Makefile
 │   │   ├── nvdec_pipeline.py
 │   │   └── ANALYSIS.md
-│   └── 10_tensor_core_mma/     # ✅ Complete
-│       ├── Makefile
-│       ├── mma.cu
-│       ├── README.md
-│       └── ANALYSIS.md
+│   ├── 10_tensor_core_mma/     # ✅ Complete
+│   │   ├── Makefile
+│   │   ├── mma.cu
+│   │   ├── README.md
+│   │   └── ANALYSIS.md
+│   ├── 11_tma_lab/             # ✅ Complete
+│   ├── 12_conditional_graphs/  # ✅ Complete
+│   ├── 13_cupti_trace/         # ✅ Complete
+│   ├── 14_tiny_transformer/    # ✅ Complete
+│   ├── 15_cutlass_gemm/        # ✅ Complete
+│   ├── 16_fp4_ptx_mma/         # ✅ Complete
+│   └── 17_flash_attention/     # ✅ Complete
 └── results/                    # Generated benchmark outputs (in repo for reference)
 ```
 
@@ -191,6 +239,35 @@ make
 
 # Run Tensor Core MMA capstone
 cd projects/10_tensor_core_mma
+make run
+
+# Run TMA 2D tile copy
+cd projects/11_tma_lab
+make run
+
+# Run conditional CUDA graph
+cd projects/12_conditional_graphs
+make run
+
+# Run CUPTI activity trace
+cd projects/13_cupti_trace
+make run
+
+# Train tiny transformer
+cd projects/14_tiny_transformer
+make run
+
+# Build CUTLASS Hello GEMM
+cd projects/15_cutlass_gemm
+make fetch
+make run
+
+# Run FP4 PTX MMA
+cd projects/16_fp4_ptx_mma
+make run
+
+# Run FlashAttention-style attention
+cd projects/17_flash_attention
 make run
 ```
 

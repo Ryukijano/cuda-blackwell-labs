@@ -31,6 +31,15 @@ projects/*/streams
 projects/*/graph
 projects/*/hardware_probe
 projects/*/mma
+projects/*/tma
+projects/*/cond_graphs
+projects/*/cupti_trace
+projects/*/cutlass_gemm
+projects/*/fp4_mma
+projects/*/flash_attention
+
+# Large dependencies (fetched on build)
+projects/15_cutlass_gemm/cutlass/
 
 # Python build artifacts
 __pycache__/
